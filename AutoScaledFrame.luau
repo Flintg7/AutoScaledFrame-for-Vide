@@ -1,7 +1,7 @@
+--!nocheck
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local React = require(ReplicatedStorage.Packages.React)
-local useViewportSize = require(ReplicatedStorage.UI.core.hooks.useViewportSize)
+local vide = require(ReplicatedStorage.Packages.vide)
+local useViewportSize = require(ReplicatedStorage.Shared.Client.UI.Utils.useViewportSize)
 
 local STUDIO_SIZE = Vector2.new(1500, 803)
 
@@ -14,35 +14,43 @@ export type AutoScaledFrameProps = {
 	AnchorPoint: Vector2?,
 	BackgroundTransparency: number?,
 	ZIndex: number?,
-	children: React.ReactNode?,
+	Children: { Instance? },
+	Name: string?
 }
 
-return React.forwardRef(function(props: AutoScaledFrameProps, ref: React.Ref<any>)
-	local screenSize = useViewportSize() -- This uses React.useState internally
+return function(props: AutoScaledFrameProps)
+	local screenSize = useViewportSize() -- Get Screen Size
 	local minSize = props.MinSize or Vector2.zero
 	local scaleFactor = props.ScaleFactor or 1
-	local scaleBinding, setScale = React.useBinding(scaleFactor)
-	local minScale = React.useMemo(function()
+	local scaleBinding = vide.source(scaleFactor)
+
+	local minScale = vide.derive(function()
 		return math.max(minSize.X / props.Size.X.Offset, minSize.Y / props.Size.Y.Offset)
-	end, { screenSize, minSize, props.Size })
+	end)
 
-	React.useEffect(function()
-		local newScale = scaleFactor * math.min(screenSize.X / STUDIO_SIZE.X, screenSize.Y / STUDIO_SIZE.Y)
-		setScale(math.max(newScale, minScale))
-	end, { screenSize, minSize, scaleFactor })
+	vide.effect(function()
+		local newScale = scaleFactor * math.min(screenSize().X / STUDIO_SIZE.X, screenSize().Y / STUDIO_SIZE.Y)
+		scaleBinding(math.max(newScale, minScale()))
+	end)
 
-	return React.createElement("Frame", {
+	return vide.create("Frame", {
+		Name = props.Name or "Frame",
 		Size = props.Size,
-		Position = props.Position,
-		AnchorPoint = props.AnchorPoint,
-		Rotation = props.Rotation,
-		ZIndex = props.ZIndex,
+		Position = props.Position or UDim2.new(),
+		AnchorPoint = props.AnchorPoint or Vector2.new(0.5, 0.5),
+		Rotation = props.Rotation or 0,
+		ZIndex = props.ZIndex or 1,
 		BackgroundTransparency = props.BackgroundTransparency or 1,
-		ref = ref,
-	}, {
-		React.createElement("UIScale", {
+
+		vide.action(function(instance)
+			if props.action then
+				props.action(instance)
+			end
+		end),
+
+		vide.create("UIScale", {
 			Scale = scaleBinding,
 		}),
-		props.children,
+		unpack(props.Children or {}),
 	})
-end)
+end

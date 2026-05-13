@@ -1,19 +1,22 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local React = require(ReplicatedStorage.Packages.React)
+local vide = require(ReplicatedStorage.Packages.vide)
 
 return function()
-	local value, setValue = React.useState(workspace.CurrentCamera.ViewportSize)
+	local value = vide.source(workspace.CurrentCamera.ViewportSize)
+	
+	local conn
 
-	React.useEffect(function()
-		local conn = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-			setValue(workspace.CurrentCamera.ViewportSize)
+	vide.effect(function()
+		conn = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+			value(workspace.CurrentCamera.ViewportSize)
 		end)
-
-		return function()
+	end)
+	
+	vide.cleanup(function()
+		if conn then
 			conn:Disconnect()
 		end
-	end, {})
+	end)
 
 	return value
 end
